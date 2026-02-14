@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chef - My Cafe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{font-family:Arial; padding:20px; background:#f5f5f5; text-align:center;}
+    h1{margin-bottom:20px; color:#333;}
+    input, button{padding:8px; margin:5px; border-radius:5px; border:1px solid #ccc;}
+    button{cursor:pointer; font-weight:bold; transition:0.3s;}
+    button:hover{opacity:0.8;}
+    .login-section, #chefPanel{background:white; padding:20px; border-radius:10px; margin-bottom:20px;}
+    .order{background:white; padding:15px; margin-bottom:10px; border-radius:5px; display:flex; justify-content:space-between; align-items:center;}
+    .order button{background:black; color:white; border:none; border-radius:5px; padding:6px 12px;}
+    .order button:hover{background:green;}
+  </style>
+</head>
+<body>
+
+<h1>👨‍🍳 Chef Page</h1>
+<div class="login-section">
+  <label>Password: <input type="password" id="chefPass"></label>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="chefPanel" style="display:none;">
+  <h2>Orders</h2>
+  <div id="orderList"></div>
+</div>
+
+<script>
+const PASSWORD="chef123";
+
+function login(){
+  const pass=document.getElementById('chefPass').value;
+  if(pass===PASSWORD){
+    document.getElementById('chefPanel').style.display='block';
+    document.querySelector('.login-section').style.display='none';
+    loadOrders();
+  }else{alert("Wrong password");}
+}
+
+function loadOrders(){
+  const orders=JSON.parse(localStorage.getItem('orders'))||[];
+  const div=document.getElementById('orderList');
+  div.innerHTML='';
+  orders.forEach((o,i)=>{
+    const d=document.createElement('div');
+    d.className='order';
+    d.innerHTML=`<span><strong>Time:</strong> ${o.time}<br><strong>Items:</strong> ${o.items.map(x=>x.name+' x'+x.qty).join(', ')}</span><button onclick="removeOrder(${i})">Mark Done</button>`;
+    div.appendChild(d);
+  });
+}
+
+function removeOrder(idx){
+  let orders=JSON.parse(localStorage.getItem('orders'))||[];
+  orders.splice(idx,1);
+  localStorage.setItem('orders',JSON.stringify(orders));
+  loadOrders();
+}
+</script>
+
+</body>
+</html>

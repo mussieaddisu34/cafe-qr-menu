@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin - My Cafe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{
+      font-family: Arial; 
+      padding: 20px; 
+      background: #f5f5f5; 
+      text-align: center;
+    }
+    h1 { margin-bottom: 20px; color: #333; }
+    input, select, button{
+      padding: 8px; margin: 5px; border-radius:5px; border:1px solid #ccc;
+    }
+    button{
+      cursor:pointer; font-weight:bold; transition:0.3s;
+    }
+    button:hover{opacity:0.8;}
+    .login-section, #adminPanel{
+      background:white; padding:20px; border-radius:10px; margin-bottom:20px;
+    }
+    .category, .item{
+      background:#e0f7fa; padding:10px; margin-bottom:8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;
+    }
+    .category button, .item button{
+      background:#00796b; color:white; border:none; border-radius:5px; padding:4px 8px;
+    }
+    .category button:hover, .item button:hover{background:#004d40;}
+    label{display:block; margin-top:10px; font-weight:bold;}
+    input[type="text"], input[type="number"], select{width:80%; max-width:300px;}
+  </style>
+</head>
+<body>
+
+<h1>🍀 Admin Page</h1>
+
+<div class="login-section">
+  <label>Password: <input type="password" id="adminPass"></label>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="adminPanel" style="display:none;">
+  <h2>Categories</h2>
+  <div id="categoryList"></div>
+  <input type="text" id="newCategory" placeholder="New Category">
+  <button onclick="addCategory()">Add Category</button>
+
+  <h2>Items</h2>
+  <div id="itemList"></div>
+  <input type="text" id="itemName" placeholder="Item Name">
+  <input type="number" id="itemPrice" placeholder="Price">
+  <select id="itemCategory"></select>
+  <button onclick="addItem()">Add Item</button>
+</div>
+
+<script>
+const PASSWORD="admin123";
+let menu=JSON.parse(localStorage.getItem('menu'))||{categories:["Drinks","Foods"],items:[
+{name:"Cappuccino",price:4,category:"Drinks"},
+{name:"Latte",price:5,category:"Drinks"},
+{name:"Espresso",price:3,category:"Drinks"},
+{name:"Cheesecake",price:6,category:"Foods"},
+{name:"Sandwich",price:7,category:"Foods"}
+]};
+
+function login(){
+  const pass=document.getElementById('adminPass').value;
+  if(pass===PASSWORD){
+    document.getElementById('adminPanel').style.display='block';
+    loadCategories();
+    loadItems();
+    document.querySelector('.login-section').style.display='none';
+  }else{alert("Wrong password");}
+}
+
+function loadCategories(){
+  const div=document.getElementById('categoryList');
+  div.innerHTML='';
+  menu.categories.forEach((c,i)=>{
+    const d=document.createElement('div');
+    d.className='category';
+    d.innerHTML=`${c} <button onclick="removeCategory(${i})">Remove</button>`;
+    div.appendChild(d);
+  });
+  const select=document.getElementById('itemCategory');
+  select.innerHTML='';
+  menu.categories.forEach(c=>{let opt=document.createElement('option'); opt.value=c; opt.text=c; select.appendChild(opt);});
+}
+
+function loadItems(){
+  const div=document.getElementById('itemList');
+  div.innerHTML='';
+  menu.items.forEach((i,idx)=>{
+    const d=document.createElement('div');
+    d.className='item';
+    d.innerHTML=`${i.name} ($${i.price}) - ${i.category} <button onclick="removeItem(${idx})">Remove</button>`;
+    div.appendChild(d);
+  });
+}
+
+function addCategory(){
+  const val=document.getElementById('newCategory').value.trim();
+  if(val && !menu.categories.includes(val)){
+    menu.categories.push(val);
+    localStorage.setItem('menu',JSON.stringify(menu));
+    loadCategories(); 
+    document.getElementById('newCategory').value='';
+  }
+}
+
+function removeCategory(idx){
+  const cat=menu.categories[idx];
+  menu.categories.splice(idx,1);
+  menu.items=menu.items.filter(i=>i.category!==cat);
+  localStorage.setItem('menu',JSON.stringify(menu));
+  loadCategories(); loadItems();
+}
+
+function addItem(){
+  const name=document.getElementById('itemName').value.trim();
+  const price=parseFloat(document.getElementById('itemPrice').value);
+  const category=document.getElementById('itemCategory').value;
+  if(name && !isNaN(price) && category){
+    menu.items.push({name,price,category});
+    localStorage.setItem('menu',JSON.stringify(menu));
+    loadItems();
+    document.getElementById('itemName').value=''; document.getElementById('itemPrice').value='';
+  }
+}
+
+function removeItem(idx){
+  menu.items.splice(idx,1);
+  localStorage.setItem('menu',JSON.stringify(menu));
+  loadItems();
+}
+</script>
+
+</body>
+</html>
