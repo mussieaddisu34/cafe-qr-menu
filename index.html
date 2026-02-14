@@ -1,72 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>☕ My Cafe QR Menu</title>
+  <title>My Cafe - Menu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial; margin:0; padding:20px; background:#f5f5f5; }
-    img.logo { max-width:120px; margin-bottom:10px; display:block; margin-left:auto; margin-right:auto; }
-    h1 { text-align:center; margin-bottom:20px; }
+    body{ font-family: Arial; padding:20px; background:#f5f5f5; }
+    h1,h2{ color:#333; }
     
-    .categories {
+    .categoryNav button{
+      padding:8px 12px; margin:5px;
+      border:none; border-radius:5px;
+      cursor:pointer; transition:0.3s;
+      background:#c8e6c9;
+    }
+
+    .categoryNav button.active{
+      background:#2e7d32;
+      color:white;
+    }
+
+    .item{
+      background:#e8f5e9;
+      padding:10px;
+      margin-bottom:8px;
+      border-radius:8px;
       display:flex;
-      overflow-x:auto;
-      padding-bottom:10px;
-      margin-bottom:20px;
+      justify-content:space-between;
+      align-items:center;
     }
-    .category-btn {
-      flex:0 0 auto;
-      background:black; color:white; margin-right:10px; padding:12px 20px;
-      border:none; border-radius:5px; cursor:pointer; font-weight:bold; transition:0.3s;
+
+    .item button{
+      background:#2e7d32;
+      color:white;
+      border:none;
+      border-radius:5px;
+      padding:5px 8px;
+      cursor:pointer;
     }
-    .category-btn.active { background:green; }
-    .category-btn:hover { opacity:0.8; }
 
-    .item { background:white; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; border-radius:5px; }
-    .item button { background:black; color:white; border:none; padding:8px 14px; border-radius:3px; cursor:pointer; transition:0.3s; }
-    .item button:hover { background:green; }
+    #cart{
+      background:#dcedc8;
+      padding:15px;
+      border-radius:8px;
+      margin-top:20px;
+    }
 
-    .cart { background:white; padding:20px; border-radius:5px; margin-top:30px; }
-    .cart-item { display:flex; justify-content:space-between; margin-bottom:8px; }
-    .cart-item button { background:red; border:none; padding:4px 10px; color:white; border-radius:3px; cursor:pointer; transition:0.3s; }
-    .cart-item button:hover { background:#a00; }
-    
-    .pay-btn { display:block; margin-top:10px; padding:12px; background:green; color:white; text-decoration:none; border-radius:5px; font-weight:bold; transition:0.3s; }
-    .pay-btn:hover { background:#004d00; }
+    #cart button{
+      background:#2e7d32;
+      color:white;
+      border:none;
+      border-radius:5px;
+      padding:5px 8px;
+      cursor:pointer;
+    }
 
-    /* Mobile adjustments */
-    @media(max-width:600px){
-      .category-btn { padding:10px 14px; font-size:14px; }
-      .item { flex-direction: column; align-items:flex-start; }
-      .item button { margin-top:8px; width:100%; }
+    #submitOrderBtn{
+      margin-top:10px;
+      padding:8px 15px;
+      font-weight:bold;
     }
   </style>
 </head>
 <body>
 
-<img src="https://yourlogo.com/logo.png" alt="Cafe Logo" class="logo">
-<h1>☕ My Cafe QR Menu</h1>
+<h1>🍽️ My Cafe Menu</h1>
 
-<div class="categories" id="categories"></div>
-<div id="menu"></div>
+<!-- CATEGORY BUTTONS -->
+<div class="categoryNav">
+  <button onclick="showCategory('Drinks')" id="btnDrinks">Drinks</button>
+  <button onclick="showCategory('Foods')" id="btnFoods">Foods</button>
+</div>
 
-<div class="cart">
+<!-- ITEMS -->
+<div id="itemList"></div>
+
+<!-- CART -->
+<div id="cart">
   <h2>🛒 Cart</h2>
-  <div id="cartItems">Your cart is empty</div>
-  <h3>Total: $<span id="total">0</span></h3>
-  <h3>💳 Payment Options</h3>
-  <a id="stripeLink" class="pay-btn" target="_blank">Pay with Card</a>
-  <a id="paypalLink" class="pay-btn" target="_blank">Pay with PayPal</a>
-  <a id="whatsappLink" class="pay-btn" target="_blank">Order via WhatsApp</a>
+  <div id="cartItems"></div>
+  <h3 id="totalPrice">Total: $0</h3>
+  <button id="submitOrderBtn" onclick="submitOrder()">Submit Order</button>
 </div>
 
 <script>
-// Menu & Cart logic (same as before)
-let cart = [];
-let activeCategory = null;
+
+/* ===== LOAD MENU FROM ADMIN ===== */
 let menu = JSON.parse(localStorage.getItem('menu')) || {
-  categories: ["Drinks","Foods"],
-  items: [
+  categories:["Drinks","Foods"],
+  items:[
     {name:"Cappuccino",price:4,category:"Drinks"},
     {name:"Latte",price:5,category:"Drinks"},
     {name:"Espresso",price:3,category:"Drinks"},
@@ -75,78 +96,98 @@ let menu = JSON.parse(localStorage.getItem('menu')) || {
   ]
 };
 
-function showCategories(){
-  const catDiv = document.getElementById('categories');
-  catDiv.innerHTML = '';
-  menu.categories.forEach(cat => {
-    const btn = document.createElement('button');
-    btn.className = 'category-btn';
-    btn.textContent = cat;
-    btn.onclick = () => toggleCategory(cat, btn);
-    catDiv.appendChild(btn);
-  });
-}
+let cart = [];
+let selectedTable = "Table 1"; // You can make this dynamic later
 
-function toggleCategory(category, btn){
-  const menuDiv = document.getElementById('menu');
-  if(activeCategory === category){
-    menuDiv.innerHTML = '';
-    activeCategory = null;
-    btn.classList.remove('active');
-    return;
-  }
-  activeCategory = category;
-  document.querySelectorAll('.category-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+/* ===== SHOW CATEGORY ===== */
+function showCategory(cat){
+  const itemList = document.getElementById('itemList');
+  itemList.innerHTML = '';
 
-  menuDiv.innerHTML = '';
-  menu.items.filter(i=>i.category===category).forEach(item=>{
+  menu.items.filter(i => i.category === cat).forEach(i=>{
     const div = document.createElement('div');
-    div.className='item';
-    div.innerHTML=`<span>${item.name} - $${item.price}</span><button onclick="addToCart('${item.name}',${item.price})">Add</button>`;
-    menuDiv.appendChild(div);
+    div.className = 'item';
+    div.innerHTML = `
+      ${i.name} - $${i.price}
+      <button onclick="addToCart('${i.name}', ${i.price})">Add</button>
+    `;
+    itemList.appendChild(div);
   });
+
+  document.querySelectorAll('.categoryNav button')
+    .forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn'+cat).classList.add('active');
 }
 
-function addToCart(name,price){
-  const existing=cart.find(i=>i.name===name);
-  if(existing){existing.qty+=1;}else{cart.push({name,price,qty:1});}
-  updateCart();
+/* ===== CART FUNCTIONS ===== */
+function addToCart(name, price){
+  let existing = cart.find(c => c.name === name);
+  if(existing){
+    existing.qty += 1;
+  } else {
+    cart.push({name, price, qty:1});
+  }
+  renderCart();
 }
 
 function removeFromCart(name){
-  cart=cart.filter(i=>i.name!==name);
-  updateCart();
+  cart = cart.filter(c => c.name !== name);
+  renderCart();
 }
 
-function updateCart(){
-  const cartDiv=document.getElementById('cartItems');
-  cartDiv.innerHTML='';
-  if(cart.length===0){cartDiv.innerHTML='Your cart is empty';}
-  let total=0;
-  cart.forEach(i=>{
-    total+=i.price*i.qty;
-    const div=document.createElement('div');
-    div.className='cart-item';
-    div.innerHTML=`<span>${i.name} x${i.qty} - $${i.price*i.qty}</span><button onclick="removeFromCart('${i.name}')">Remove</button>`;
-    cartDiv.appendChild(div);
+function renderCart(){
+  const div = document.getElementById('cartItems');
+  const totalDiv = document.getElementById('totalPrice');
+  div.innerHTML = '';
+
+  let total = 0;
+
+  if(cart.length === 0){
+    div.innerHTML = "<p>Cart is empty</p>";
+    totalDiv.textContent = "Total: $0";
+    return;
+  }
+
+  cart.forEach(c=>{
+    total += c.price * c.qty;
+
+    const d = document.createElement('div');
+    d.innerHTML = `
+      ${c.name} x${c.qty} - $${c.price*c.qty}
+      <button onclick="removeFromCart('${c.name}')">Remove</button>
+    `;
+    div.appendChild(d);
   });
-  document.getElementById('total').innerText=total;
 
-  // Payment links (replace with your links)
-  document.getElementById('stripeLink').href="https://buy.stripe.com/YOUR_STRIPE_LINK?amount="+(total*100);
-  document.getElementById('paypalLink').href="https://paypal.me/YOURNAME/"+total;
-  document.getElementById('whatsappLink').href="https://wa.me/1234567890?text=Order:%20"+encodeURIComponent(cart.map(i=>i.name+" x"+i.qty).join(", "))+"%20Total:$"+total;
-
-  // Save orders to localStorage for chef
-  let orders=JSON.parse(localStorage.getItem('orders'))||[];
-  orders.push({time:new Date().toLocaleTimeString(),items:cart});
-  localStorage.setItem('orders',JSON.stringify(orders));
+  totalDiv.textContent = "Total: $" + total;
 }
 
-showCategories();
+/* ===== SUBMIT ORDER ===== */
+function submitOrder(){
+  if(cart.length === 0){
+    alert("Cart is empty!");
+    return;
+  }
+
+  // Save order for admin & chef
+  localStorage.setItem('cart_'+selectedTable, JSON.stringify(cart));
+
+  // Reset status
+  localStorage.setItem('status_'+selectedTable, JSON.stringify({}));
+
+  alert("Order submitted successfully!");
+
+  cart = [];
+  renderCart();
+}
+
+/* ===== INIT ===== */
+window.onload = ()=>{
+  showCategory('Drinks');
+  renderCart();
+};
+
 </script>
 
 </body>
 </html>
-
